@@ -98,10 +98,10 @@ assets:
   # NOT save runner minutes: the platform self-skips per version but still
   # boots a real macOS/Windows runner and greens having tested nothing.
   #
-  # darwin/amd64:
-  #   - "^fx_darwin_amd64$"
-  # darwin/arm64:
-  #   - "^fx_darwin_arm64$"
+  darwin/amd64:
+    - "^fx_darwin_amd64$"
+  darwin/arm64:
+    - "^fx_darwin_arm64$"
   #
   # windows/amd64:
   #   - "^fx_windows_amd64\\.exe$"
