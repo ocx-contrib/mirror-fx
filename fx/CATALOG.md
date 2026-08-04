@@ -35,17 +35,6 @@ Note that **piped input with no expression is not a supported combination** —
 fx tries to open the terminal for its viewer and fails. Pass an expression when
 stdin is a pipe.
 
-## Install with ocx
-
-```sh
-ocx install ocx.sh/fx/fx
-```
-
-```sh
-# or pin a specific version
-ocx install ocx.sh/fx/fx:39.2.0
-```
-
 ## Links
 
 - [fx on GitHub](https://github.com/antonmedv/fx)
