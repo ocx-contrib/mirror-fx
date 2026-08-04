@@ -1,0 +1,160 @@
+# ⚠ `extends:` is a SHALLOW merge of TOP-LEVEL KEYS. Setting a key here
+# REPLACES the base's block outright — there is no per-key merge. `platforms:`
+# is deliberately NOT restated below: it carries the container legs that make
+# this spec's libc claims honest, and restating it to tweak one runner would
+# drop them all without reddening anything. This repo is single-package, so the
+# measured matrix lives in the base and nothing here touches it.
+extends: ../mirror-base.yml
+
+name: fx
+
+# Logical index package `fx/fx` at the physical path
+# `ghcr.io/ocx-contrib/fx/fx` — slash segments, never hyphen-flattened. Two
+# segments always; `antonmedv` is a personal handle, not a vendor, so the tool
+# names itself (skill Phase 1 rule 4 — the same reason mirroring jq in 2022
+# would wrongly have produced `stedolan/jq`). The first segment must be this
+# repo's own GitHub owner: GITHUB_TOKEN only authorises packages owned by the
+# repo the workflow runs in.
+target:
+  registry: ghcr.io
+  repository: ocx-contrib/fx/fx
+
+source:
+  type: github_release
+  owner: antonmedv
+  repo: fx
+  # fx tags are bare semver — NO "v" prefix (e.g. "39.2.0"), unlike most of the
+  # fleet. A `^v…` pattern here would match nothing at all.
+  tag_pattern: "^(?P<version>\\d+\\.\\d+\\.\\d+)$"
+
+# ─── libc gate (Phase 3.5) — the evidence, not the conclusion ───────────────
+#
+# `os.features` states what an artifact REQUIRES OF THE HOST. fx is pure Go
+# with no cgo, so upstream ships one Linux binary per arch with no musl/gnu
+# split. Measured on ALL SIX in-range Linux artifacts (2 arches × 39.0.4,
+# 39.1.0, 39.2.0) — not just the newest:
+#
+#   $ file fx_linux_amd64
+#   ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked,
+#   Go BuildID=…, with debug_info, not stripped
+#   $ file fx_linux_arm64
+#   ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically
+#   linked, Go BuildID=…, with debug_info, not stripped
+#   $ readelf -l fx_linux_{amd64,arm64} | grep -c INTERP  → 0   (all six)
+#   $ readelf -d fx_linux_{amd64,arm64} | grep -c NEEDED  → 0   (all six)
+#
+#     ⇒ requires NOTHING of the host → BARE `linux/amd64` and `linux/arm64`.
+#       `+libc.musl` would be a false requirement that hid the package from
+#       every glibc host it in fact runs on, and `+libc.glibc` would hide it
+#       from Alpine. The alpine container leg in ../mirror-base.yml is what
+#       turns the universality claim into evidence. Zero DT_NEEDED also means
+#       no `containers[].setup` is required on any leg.
+#
+# ─── The version-in-filename trap ──────────────────────────────────────────
+#
+# fx asset filenames carry NO version string: `fx_linux_amd64` is spelled
+# identically on 39.0.4, 39.1.0 and 39.2.0. Two consequences:
+#
+#   • The patterns below are EXACT names, not `<tool>-.*-<triple>` globs. Each
+#     matches exactly one asset per release with no version component to vary.
+#   • Nothing may resolve a download by matching a version substring. The
+#     pipeline resolves through the release's own asset list, which yields a
+#     TAG-SCOPED URL — verified directly:
+#       $ gh api repos/antonmedv/fx/releases/tags/39.0.4 \
+#           --jq '.assets[]|select(.name=="fx_linux_amd64")|.browser_download_url'
+#       https://github.com/antonmedv/fx/releases/download/39.0.4/fx_linux_amd64
+#     and confirmed end-to-end by BEHAVIOUR rather than by URL shape: each
+#     downloaded binary self-reports the tag it came from —
+#       39.0.4 → `fx --version` = 39.0.4
+#       39.1.0 → 39.1.0
+#       39.2.0 → 39.2.0
+#     Byte sizes differ per tag too (17776174 / 18096993 / 18104523 for
+#     linux/amd64), so the identical filenames are not identical content. This
+#     is the check that would catch an upstream shipping the PREVIOUS version's
+#     binaries under a new tag — a filename comparison cannot see it here.
+#
+# ─── Scope (verified against 39.0.4, the floor, 39.1.0 and 39.2.0) ─────────
+#
+# Every pattern below matches EXACTLY ONE asset on EVERY one of the three
+# in-range releases (anchored `grep -cE` against each full per-release asset
+# list). A pattern matching ZERO is silently skipped, not an error — it would
+# yield a green run with a missing platform.
+#
+# Upstream ships exactly six assets per release and this mirror carries all
+# six: there is no armv7/i686/riscv64/s390x asset to exclude, no `.deb`, and no
+# `.sha256` sidecar. The asset set has been uniform since at least 37.0.1, so
+# the floor is a CATALOG-SCOPE choice (keep the mirror recent), not a forced
+# escape from an asset-naming flip.
+#
+# Every asset is a RAW BINARY — no archive wrapper anywhere, not even a zip on
+# Windows. The `.exe` suffix is part of the upstream asset NAME on Windows.
+assets:
+  linux/amd64:
+    - "^fx_linux_amd64$"
+  linux/arm64:
+    - "^fx_linux_arm64$"
+  # Staged rollout — uncommented one pass at a time, together with the matching
+  # `platforms:` key in ../mirror-base.yml. Commenting `assets:` alone would
+  # NOT save runner minutes: the platform self-skips per version but still
+  # boots a real macOS/Windows runner and greens having tested nothing.
+  #
+  # darwin/amd64:
+  #   - "^fx_darwin_amd64$"
+  # darwin/arm64:
+  #   - "^fx_darwin_arm64$"
+  #
+  # windows/amd64:
+  #   - "^fx_windows_amd64\\.exe$"
+  # windows/arm64:
+  #   - "^fx_windows_arm64\\.exe$"
+
+asset_type:
+  # Raw binary on every platform — there is no archive to strip, so the file
+  # lands directly at the content root and PATH is a bare ${installPath}. That
+  # is the one layout where a bare ${installPath} is correct, and it is why
+  # `bin_scan` must stay `off` with `binaries` hand-listed (../mirror-base.yml).
+  #
+  # The upstream Windows assets already END in `.exe`, so the suffix survives
+  # into the bundle and no per-platform `name: fx.exe` override is needed —
+  # unlike mirror-direnv, whose 2.37.0+ Windows assets dropped the suffix and
+  # therefore had to name it back on. Verified locally by running `pipeline
+  # prepare` against a windows/amd64-only temp spec and listing the bundle.
+  type: binary
+  name: fx
+
+metadata:
+  default: metadata.json
+
+catalog:
+  logo: logo.svg
+
+versions:
+  # 39.0.4 is the floor. The asset set and naming are uniform far below it, so
+  # nothing forces this line — it scopes the catalog to the current 39.x train
+  # (three releases) instead of backfilling six years of tags. Every release
+  # from it up is complete: no in-range release is missing a declared
+  # platform's asset, and an asset-less release inside the range would be
+  # dropped SILENTLY by the pipeline.
+  min: "39.0.4"
+  new_per_run: 5
+  poll_interval: "26 */6 * * *"
+
+tests:
+  # `script:` resolves from the REPOSITORY ROOT — unlike `metadata.default` and
+  # `catalog.logo` above, which resolve against this spec's own directory.
+  - name: smoke
+    script: fx/tests/smoke.star
+
+annotations:
+  # From the Phase 1.5 license gate:
+  #   $ gh api repos/antonmedv/fx/license --jq '.license.spdx_id'
+  #   MIT
+  # Re-read from the raw LICENSE blob as well: unmodified MIT text,
+  # Copyright (c) 2018 Anton Medvedev, no added clauses.
+  org.opencontainers.image.licenses: "MIT"
+
+announce:
+  # Spelled out, not derived from target.repository — the logical name and the
+  # physical path are related by convention only.
+  package: fx/fx
+  fork: ocx-contrib/index
