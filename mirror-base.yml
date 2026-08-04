@@ -79,12 +79,14 @@ bin_scan: "off"
 # drop it and the universal claim is merely asserted. No `containers[].setup`
 # is needed on any leg: zero DT_NEEDED means there is nothing to provision.
 #
-# Staged rollout (skill Phase 10): darwin and windows are pre-written and
-# commented out below AND in fx/mirror.yml's `assets:`, uncommented one pass at
-# a time once the Linux legs are end-to-end green. Both halves are commented
-# together deliberately — staging `assets:` alone does NOT save runner minutes:
-# an unmatched platform self-skips per VERSION but still boots the macos-14 /
-# windows runner and reports SUCCESS having tested nothing.
+# Rolled out in three passes (skill Phase 10): linux, then darwin, then
+# windows, each pass uncommenting a platform key HERE together with its asset
+# pattern in fx/mirror.yml and regenerating CI. Both halves moved together
+# deliberately — staging `assets:` alone does NOT save runner minutes: an
+# unmatched platform self-skips per VERSION but still boots the macos-14 /
+# windows runner and reports SUCCESS having tested nothing. All six platforms
+# are now live; the sequence is recorded because the next added platform should
+# follow it.
 platforms:
   linux/amd64:
     runner: ubuntu-latest
@@ -112,13 +114,13 @@ platforms:
     runner: macos-14
     shell: bash
   #
-  # windows/amd64:
-  #   runner: windows-latest
-  #   shell: pwsh
-  # windows/arm64:
-  #   # Native arm64 Windows runner — the amd64 pool cannot execute an ARM64 PE.
-  #   runner: windows-11-arm
-  #   shell: pwsh
+  windows/amd64:
+    runner: windows-latest
+    shell: pwsh
+  windows/arm64:
+    # Native arm64 Windows runner — the amd64 pool cannot execute an ARM64 PE.
+    runner: windows-11-arm
+    shell: pwsh
 
 notify:
   discord:

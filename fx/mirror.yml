@@ -93,20 +93,19 @@ assets:
     - "^fx_linux_amd64$"
   linux/arm64:
     - "^fx_linux_arm64$"
-  # Staged rollout — uncommented one pass at a time, together with the matching
-  # `platforms:` key in ../mirror-base.yml. Commenting `assets:` alone would
-  # NOT save runner minutes: the platform self-skips per version but still
-  # boots a real macOS/Windows runner and greens having tested nothing.
-  #
+  # Added in passes 2 and 3, each together with the matching `platforms:` key
+  # in ../mirror-base.yml. Staging `assets:` alone would NOT have saved runner
+  # minutes: the platform self-skips per version but still boots a real
+  # macOS/Windows runner and greens having tested nothing.
   darwin/amd64:
     - "^fx_darwin_amd64$"
   darwin/arm64:
     - "^fx_darwin_arm64$"
   #
-  # windows/amd64:
-  #   - "^fx_windows_amd64\\.exe$"
-  # windows/arm64:
-  #   - "^fx_windows_arm64\\.exe$"
+  windows/amd64:
+    - "^fx_windows_amd64\\.exe$"
+  windows/arm64:
+    - "^fx_windows_arm64\\.exe$"
 
 asset_type:
   # Raw binary on every platform — there is no archive to strip, so the file
