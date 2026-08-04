@@ -6,7 +6,7 @@ name: fx
 
 on:
   schedule:
-    - cron: '26 */6 * * *'
+    - cron: '9 0-23/6 * * *'
   workflow_dispatch:
   push:
     branches: [main]
