@@ -83,7 +83,7 @@ bin_scan: "off"
 # windows, each pass uncommenting a platform key HERE together with its asset
 # pattern in fx/mirror.yml and regenerating CI. Both halves moved together
 # deliberately — staging `assets:` alone does NOT save runner minutes: an
-# unmatched platform self-skips per VERSION but still boots the macos-14 /
+# unmatched platform self-skips per VERSION but still boots the macos-15 /
 # windows runner and reports SUCCESS having tested nothing. All six platforms
 # are now live; the sequence is recorded because the next added platform should
 # follow it.
@@ -106,12 +106,12 @@ platforms:
   # container engine, and the key is rejected at spec load.
   #
   darwin/amd64:
-    # Intel slice tested on the arm64 macos-14 runner via Rosetta 2 —
+    # Intel slice tested on the arm64 macos-15 runner via Rosetta 2 —
     # GitHub's native macos-13 Intel pool is exhausted and deadlocks push.
-    runner: macos-14
+    runner: macos-15
     prefix: ["arch", "-x86_64"]
   darwin/arm64:
-    runner: macos-14
+    runner: macos-15
     shell: bash
   #
   windows/amd64:
